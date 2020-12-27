@@ -136,7 +136,7 @@ int main(void)
 		perror("fork error");
 		exit(1);
 	}
-	else if(pid1 > 0){
+	else if(pid1 == 0){
 		//child 1 process
 		while(1){
 			int amount = read(part1, buf1, sizeof(buf1));
@@ -160,7 +160,7 @@ int main(void)
 		perror("fork error");
 		exit(1);
 	}
-	else if(pid2 > 0){
+	else if(pid2 == 0){
 		//child 2 process
 		while(1){
 			int amount = read(part2, buf2, sizeof(buf2));
@@ -179,8 +179,8 @@ int main(void)
 		exit(0);
 	}
 	//parent process
-	wait(NULL);
-	wait(NULL);
+	waitpid(-1, NULL, 0);
+	waitpid(-1, NULL, 0);
 	printf("Server -> parent exiting\n");
 	/* Make sure we don't leak open files */
 	if (close(part1) < 0)

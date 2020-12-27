@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
 		perror("fork error");
 		exit(1);
 	}
-	else if(reading_pid > 0){
+	else if(reading_pid == 0){
 		//reading process
 		while(1){
 			//read incoming
@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
 		perror("fork error");
 		exit(1);
 	}
-	else if(writing_pid > 0){
+	else if(writing_pid == 0){
 		//writing process
 		while(1){
 			//read stdin
@@ -141,12 +141,10 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 
-	wait(NULL);
-	wait(NULL);
+	waitpid(-1, NULL, 0);
+	waitpid(-1, NULL, 0);
 	if (close(sd) < 0)
 		perror("close");
-
-	fprintf(stdout, "Parent exiting\n");
 
 	return 0;
 }
