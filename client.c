@@ -18,6 +18,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -58,8 +59,8 @@ ssize_t read_line(int fd, char * buf){
 int main(int argc, char *argv[])
 {
 	int sd, port;
-	ssize_t n, bytes_read;
-	char buf[100];
+	pid_t reading_pid, writing_pid;
+	char buf1[100], buf2[100];
 	char *hostname;
 	struct hostent *hp;
 	struct sockaddr_in sa;
@@ -95,45 +96,57 @@ int main(int argc, char *argv[])
 	}
 	fprintf(stderr, "Connected.\n");
 
-	/* Be careful with buffer overruns, ensure NUL-termination */
-	while(1){
-		bytes_read  = read_line(0, buf);
+	reading_pid = fork();
+	if(reading_pid < 0){
+		perror("fork error");
+		exit(1);
+	}
+	else if(reading_pid > 0){
+		//reading process
+		while(1){
+			//read incoming
+			int amount = read(sd, buf1, sizeof(buf1));
+			if (amount < 0) {
+				perror("read");
+				exit(1);
+			}
+			if (amount <= 0)
+				break;
 
-		/* Say something... */
-		if (insist_write(sd, buf, bytes_read) != bytes_read) {
-			perror("write");
-			exit(1);
+			if (insist_write(0, buf1, amount) != amount) {
+				perror("write");
+				exit(1);
+			}
+			fprintf(stdout, "\n");
 		}
-		fprintf(stdout, "Remote says: ");
-		fflush(stdout);
-
-		/*
-		 * Let the remote know we're not going to write anything else.
-		 * Try removing the shutdown() call and see what happens.
-		 */
-		// if (shutdown(sd, SHUT_WR) < 0) {
-		// 	perror("shutdown");
-		// 	exit(1);
-		// }
-
-		/* Read answer and write it to standard output */
-		n = read(sd, buf, sizeof(buf));
-
-		if (n < 0) {
-			perror("read");
-			exit(1);
-		}
-
-		if (n <= 0)
-			break;
-
-		if (insist_write(0, buf, n) != n) {
-			perror("write");
-			exit(1);
-		}
-		fprintf(stdout, "\n");
+		exit(0);
 	}
 
-	fprintf(stderr, "\nDone.\n");
+	writing_pid = fork();
+	if(writing_pid < 0){
+		perror("fork error");
+		exit(1);
+	}
+	else if(writing_pid > 0){
+		//writing process
+		while(1){
+			//read stdin
+			int amount = read_line(0, buf2);
+
+			if (insist_write(sd, buf2, amount) != amount) {
+				perror("write");
+				exit(1);
+			}
+		}
+		exit(0);
+	}
+
+	wait(NULL);
+	wait(NULL);
+	if (close(sd) < 0)
+		perror("close");
+
+	fprintf(stdout, "Parent exiting\n");
+
 	return 0;
 }
