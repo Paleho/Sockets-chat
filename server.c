@@ -18,6 +18,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -65,10 +66,10 @@ ssize_t read_line(int fd, char * buf){
 
 int main(void)
 {
-	char buf[100];
+	char buf1[100], buf2[100];
 	char addrstr[INET_ADDRSTRLEN];
-	int sd, newsd;
-	ssize_t n;
+	int sd, part1, part2;
+	pid_t pid1, pid2;
 	socklen_t len;
 	struct sockaddr_in sa;
 
@@ -99,45 +100,95 @@ int main(void)
 		exit(1);
 	}
 
-	/* Loop forever, accept()ing connections */
-	for (;;) {
-		fprintf(stderr, "Waiting for an incoming connection...\n");
+	fprintf(stderr, "Waiting for first incoming connection...\n");
 
-		/* Accept an incoming connection */
-		len = sizeof(struct sockaddr_in);
-		if ((newsd = accept(sd, (struct sockaddr *)&sa, &len)) < 0) {
-			perror("accept");
-			exit(1);
-		}
-		if (!inet_ntop(AF_INET, &sa.sin_addr, addrstr, sizeof(addrstr))) {
-			perror("could not format IP address");
-			exit(1);
-		}
-		fprintf(stderr, "Incoming connection from %s:%d\n",
-			addrstr, ntohs(sa.sin_port));
+	/* Accept first incoming connection */
+	len = sizeof(struct sockaddr_in);
+	if ((part1 = accept(sd, (struct sockaddr *)&sa, &len)) < 0) {
+		perror("accept");
+		exit(1);
+	}
+	if (!inet_ntop(AF_INET, &sa.sin_addr, addrstr, sizeof(addrstr))) {
+		perror("could not format IP address");
+		exit(1);
+	}
+	fprintf(stderr, "Incoming connection from %s:%d\n",
+		addrstr, ntohs(sa.sin_port));
 
-		/* We break out of the loop when the remote peer goes away */
-		for (;;) {
-			n = read(newsd, buf, sizeof(buf));
-			if (n <= 0) {
-				if (n < 0)
+	fprintf(stderr, "Waiting for second incoming connection...\n");
+
+	/* Accept second incoming connection */
+	len = sizeof(struct sockaddr_in);
+	if ((part2 = accept(sd, (struct sockaddr *)&sa, &len)) < 0) {
+		perror("accept");
+		exit(1);
+	}
+	if (!inet_ntop(AF_INET, &sa.sin_addr, addrstr, sizeof(addrstr))) {
+		perror("could not format IP address");
+		exit(1);
+	}
+	fprintf(stderr, "Incoming connection from %s:%d\n",
+		addrstr, ntohs(sa.sin_port));
+
+	//forking
+	pid1 = fork();
+	if(pid1 < 0){
+		perror("fork error");
+		exit(1);
+	}
+	else if(pid1 == 0){
+		//child 1 process
+		while(1){
+			int amount = read(part1, buf1, sizeof(buf1));
+			if (amount <= 0) {
+				if (amount < 0)
 					perror("read from remote peer failed");
 				else
-					fprintf(stderr, "Peer went away\n");
+					fprintf(stderr, "Peer1 went away\n");
 				break;
 			}
-            fprintf(stdout, "Received: %s\n", buf);
-            n = read_line(0, buf);
-			if (insist_write(newsd, buf, n) != n) {
+			if (insist_write(part2, buf1, amount) != amount) {
 				perror("write to remote peer failed");
 				break;
 			}
 		}
-		/* Make sure we don't leak open files */
-		if (close(newsd) < 0)
-			perror("close");
+		exit(0);
 	}
+	//parent process
+	pid2 = fork();
+	if(pid2 < 0){
+		perror("fork error");
+		exit(1);
+	}
+	else if(pid2 == 0){
+		//child 2 process
+		while(1){
+			int amount = read(part2, buf2, sizeof(buf2));
+			if (amount <= 0) {
+				if (amount < 0)
+					perror("read from remote peer failed");
+				else
+					fprintf(stderr, "Peer2 went away\n");
+				break;
+			}
+			if (insist_write(part1, buf2, amount) != amount) {
+				perror("write to remote peer failed");
+				break;
+			}
+		}
+		exit(0);
+	}
+	//parent process
+	waitpid(-1, NULL, 0);
+	waitpid(-1, NULL, 0);
+	printf("Server -> parent exiting\n");
+	/* Make sure we don't leak open files */
+	if (close(part1) < 0)
+		perror("close");
+	if (close(part2) < 0)
+		perror("close");
+	if (close(sd) < 0)
+		perror("close");
 
-	/* This will never happen */
-	return 1;
+	return 0;
 }
