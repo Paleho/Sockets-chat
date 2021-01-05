@@ -25,6 +25,8 @@
 
 #include "socket-common.h"
 
+#define DATA_SIZE	128
+
 /* Convert a buffer to upercase */
 void toupper_buf(char *buf, size_t n)
 {
@@ -66,7 +68,7 @@ ssize_t read_line(int fd, char * buf){
 
 int main(void)
 {
-	char buf1[100], buf2[100];
+	char buf1[DATA_SIZE], buf2[DATA_SIZE];
 	char addrstr[INET_ADDRSTRLEN];
 	int sd, part1, part2;
 	pid_t pid1, pid2;
