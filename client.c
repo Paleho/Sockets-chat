@@ -3,7 +3,7 @@
  * Simple TCP/IP communication using sockets
  *
  * Sokratis Poutas <poutasok@gmail.com>
- * Aggelos Stais <>
+ * Aggelos Stais <aggelosstaisv@gmail.com>
  */
 
 #include <stdio.h>
