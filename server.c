@@ -84,7 +84,7 @@ int main(void)
 	fprintf(stderr, "Created TCP socket\n");
 
 	/* Bind to a well-known port */
-	memset(&sa, 0, sizeof(sa));
+	memset(&sa, 0, sizeof(sa)); // ??
 	sa.sin_family = AF_INET;
 	sa.sin_port = htons(TCP_PORT);
 	sa.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -108,7 +108,7 @@ int main(void)
 		perror("accept");
 		exit(1);
 	}
-	if (!inet_ntop(AF_INET, &sa.sin_addr, addrstr, sizeof(addrstr))) {
+	if (!inet_ntop(AF_INET, &sa.sin_addr, addrstr, sizeof(addrstr))) {// ??
 		perror("could not format IP address");
 		exit(1);
 	}

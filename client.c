@@ -3,7 +3,7 @@
  * Simple TCP/IP communication using sockets
  *
  * Sokratis Poutas <poutasok@gmail.com>
- * Aggelos Stais <>
+ * Aggelos Stais <aggelosstaisv@gmail.com>
  */
 
 #include <stdio.h>
@@ -38,7 +38,6 @@ ssize_t insist_write(int fd, const void *buf, size_t cnt)
 	        buf += ret;
 	        cnt -= ret;
 	}
-
 	return orig_cnt;
 }
 
@@ -80,40 +79,57 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "Created TCP socket\n");
 
 	/* Look up remote hostname on DNS */
-	if ( !(hp = gethostbyname(hostname))) {
+	if ( !(hp = gethostbyname(hostname))) {     ////
 		printf("DNS lookup failed for host %s\n", hostname);
 		exit(1);
 	}
 
 	/* Connect to remote TCP port */
 	sa.sin_family = AF_INET;
-	sa.sin_port = htons(port);
+	sa.sin_port = htons(port); //htons sets port in network byte order
+	//copies server address from hp structure to sockaddr_in
 	memcpy(&sa.sin_addr.s_addr, hp->h_addr, sizeof(struct in_addr));
 	fprintf(stderr, "Connecting to remote host... "); fflush(stderr);
+	//connect takes pointer to sockaddr_in struct after type casting it to sockaddr struct
 	if (connect(sd, (struct sockaddr *) &sa, sizeof(sa)) < 0) {
 		perror("connect");
 		exit(1);
 	}
 	fprintf(stderr, "Connected.\n");
 
+	/*
+	 * Let the remote know we're not going to write anything else.
+	 * Try removing the shutdown() call and see what happens.
+	 
+	//Should be put somewhere...find where....
+	// πρέπει να χρησιμοποιηθεί εντος κάποιου interrupt handler
+	// που θα δίνουμε ένα συνδυασμο πλήκτρων και θα μπαίνω στο handler
+	if (shutdown(sd, SHUT_WR) < 0) {
+		perror("shutdown");
+		exit(1);
+	}
+	*/
+
+	// Process reading incoming messages is created
 	reading_pid = fork();
 	if(reading_pid < 0){
 		perror("fork error");
 		exit(1);
 	}
+	//Reading process
 	else if(reading_pid == 0){
-		//reading process
 		while(1){
-			//read incoming
-			int amount = read(sd, buf1, sizeof(buf1));
-			if (amount < 0) {
+			int bytes_num = read(sd, buf1, sizeof(buf1));
+			if (bytes_num < 0) {
 				perror("read");
 				exit(1);
 			}
-			if (amount <= 0)
+			//if (bytes_num <= 0) //// 
+			// Giati? An den exoun graftei bytes tha bgei ap to loop?
+			// Kai an graftoun argotera?
 				break;
 
-			if (insist_write(0, buf1, amount) != amount) {
+			if (insist_write(1, buf1, bytes) != bytes) {
 				perror("write");
 				exit(1);
 			}
@@ -122,6 +138,7 @@ int main(int argc, char *argv[])
 		exit(0);
 	}
 
+	// Process writing outgoing messages is created
 	writing_pid = fork();
 	if(writing_pid < 0){
 		perror("fork error");
@@ -130,10 +147,11 @@ int main(int argc, char *argv[])
 	else if(writing_pid == 0){
 		//writing process
 		while(1){
-			//read stdin
-			int amount = read_line(0, buf2);
 
-			if (insist_write(sd, buf2, amount) != amount) {
+			// Read stdin for the outgoing message
+			int bytes_num = read_line(0, buf2);
+
+			if (insist_write(sd, buf2, bytes) != bytes) {
 				perror("write");
 				exit(1);
 			}

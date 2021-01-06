@@ -15,14 +15,14 @@ CFLAGS += -g
 
 LIBS =
 
-BINS = server.exec client.exec
+BINS = server client
 
 all: $(BINS)
 
-server.exec: server.c socket-common.h
+server: server.c socket-common.h
 	$(CC) $(CFLAGS) -o $@ $< $(LIBS)
 
-client.exec: client.c socket-common.h
+client: client.c socket-common.h
 	$(CC) $(CFLAGS) -o $@ $< $(LIBS)
 
 clean:
