@@ -13,7 +13,7 @@ CFLAGS = -Wall
 CFLAGS += -g
 # CFLAGS += -O2 -fomit-frame-pointer -finline-functions
 
-LIBS =
+LIBS = 
 
 BINS = server client
 
