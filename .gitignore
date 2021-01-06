@@ -1,3 +1,4 @@
 *.exec
+*.notes
 try.c
 try.exec
