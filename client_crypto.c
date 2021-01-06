@@ -1,5 +1,5 @@
 /*
- * client.c
+ * client_crypto.c
  * Simple TCP/IP communication using sockets
  *
  * Sokratis Poutas <poutasok@gmail.com>
@@ -88,8 +88,7 @@ void aes_ctx_deinit(struct cryptodev_ctx* ctx)
 	}
 }
 
-int
-aes_encrypt(struct cryptodev_ctx* ctx, const void* iv, const void* plaintext, void* ciphertext, size_t size)
+int aes_encrypt(struct cryptodev_ctx* ctx, const void* iv, const void* plaintext, void* ciphertext, size_t size)
 {
 	struct crypt_op cryp;
 
@@ -110,8 +109,7 @@ aes_encrypt(struct cryptodev_ctx* ctx, const void* iv, const void* plaintext, vo
 	return 0;
 }
 
-int
-aes_decrypt(struct cryptodev_ctx* ctx, const void* iv, const void* ciphertext, void* plaintext, size_t size)
+int aes_decrypt(struct cryptodev_ctx* ctx, const void* iv, const void* ciphertext, void* plaintext, size_t size)
 {
 	struct crypt_op cryp;
 

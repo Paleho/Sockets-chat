@@ -1,18 +1,15 @@
 /*
- * server.c
+ * server_crypto.c
  * Simple TCP/IP communication using sockets
  *
  * Sokratis Poutas <poutasok@gmail.com>
  * Aggelos Stais <aggelosstaisv@gmail.com>
  * 
- */
-
-/* Επιτρέπει την επικοινωνία μεταξύ 2 πελατών.
- * Τα μηνύματα εμφανίζονται στο τερματικό του server και των συνδεδεμένων πελατών.
- * 
- * Μπορούν μέχρι ακόμη 3 πελάτες να περιμένουν στην ουρά αναμονής για σύνδεση και να γράφουν
- * τα μηνύματα τους στο stdin, χωρίς φυσικά να εμφανίζονται στη συνομιλία.
- * Μόλις ο πελάτης αποσυνδεθεί ο server αποδέχεται τον επόμενο πελάτη και εμφανίζει τα μηνύματα του.
+ * Enables communication between 2 clients.
+ * Messages are shown to the 2 clients and server terminal.
+ * Waiting Queue: 3 others client can wait to establish connection with the server,
+ * without their messages being shown yet.
+ * When a client exits server waits for the next client.
  */
 
 #include <stdio.h>
@@ -97,7 +94,7 @@ int main(void)
 		fprintf(stderr, "Waiting for an incoming connection...\n");
 
 		/* Accept first incoming connection */
-		while(client1_fd==0){
+		if(client1_fd==0){
 				len = sizeof(struct sockaddr_in);
 				if ((client1_fd = accept(sd, (struct sockaddr *)&sa, &len)) < 0) {
 					perror("accept");
@@ -115,7 +112,7 @@ int main(void)
 			}
 			
 			/* Accept second incoming connection */
-			while(client2_fd==0){
+			if(client2_fd==0){
 				if ((client2_fd = accept(sd, (struct sockaddr *)&sa, &len)) < 0) {
 					perror("accept");
 					exit(1);
@@ -131,7 +128,6 @@ int main(void)
 				port2=ntohs(sa.sin_port);
 			}
 
-
 		// Intialization of readfds set
 		FD_ZERO(&readfds); 
 		
@@ -143,7 +139,6 @@ int main(void)
 			FD_SET(client1_fd, &readfds);
 			FD_SET(client2_fd, &readfds);
 
-					
 			if(client1_fd<client2_fd) 
 				max=client2_fd;
 			else
@@ -154,7 +149,6 @@ int main(void)
 			activity = select(max+1, &readfds , NULL , NULL , NULL);
 			if ((activity < 0) && (errno!=EINTR))
             	printf("select error");
-
 
 			// Incoming messages have been written in the socket by first client
 			// Checking whether client1_fd is present in readfds, so socket file descriptor would be ready for reading
