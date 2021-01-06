@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
 		// If any of the sockets is ready to be read (so content has been written)
 		// select will wake up
 		activity = select(sd+1, &readfds , NULL , NULL , NULL);
-
+		
 		if ((activity < 0) && (errno!=EINTR)){
             		printf("select error");
         	}
