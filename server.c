@@ -4,12 +4,12 @@
  *
  * Sokratis Poutas <poutasok@gmail.com>
  * Aggelos Stais <aggelosstaisv@gmail.com>
- * 
+ *
  */
 
 /* Επιτρέπει την επικοινωνία μεταξύ 2 πελατών.
  * Τα μηνύματα εμφανίζονται στο τερματικό του server και των συνδεδεμένων πελατών.
- * 
+ *
  * Μπορούν μέχρι ακόμη 3 πελάτες να περιμένουν στην ουρά αναμονής για σύνδεση και να γράφουν
  * τα μηνύματα τους στο stdin, χωρίς φυσικά να εμφανίζονται στη συνομιλία.
  * Μόλις ο πελάτης αποσυνδεθεί ο server αποδέχεται τον επόμενο πελάτη και εμφανίζει τα μηνύματα του.
@@ -34,12 +34,14 @@
 
 #include "socket-common.h"
 
+#define DATA_SIZE	128
+
 /* Insist until all of the data has been written */
 ssize_t insist_write(int fd, const void *buf, size_t cnt)
 {
 	ssize_t ret;
 	size_t orig_cnt = cnt;
-	
+
 	while (cnt > 0) {
 	        ret = write(fd, buf, cnt);
 	        if (ret < 0)
@@ -53,7 +55,7 @@ ssize_t insist_write(int fd, const void *buf, size_t cnt)
 
 int main(void)
 {
-	char buf[100];
+	char buf[DATA_SIZE];
 	char addrstr[INET_ADDRSTRLEN],addrstr2[INET_ADDRSTRLEN];
 	int sd,client1_fd,client2_fd,port1,port2,activity,max;
 	ssize_t n;
@@ -98,53 +100,53 @@ int main(void)
 
 		/* Accept first incoming connection */
 		while(client1_fd==0){
-				len = sizeof(struct sockaddr_in);
-				if ((client1_fd = accept(sd, (struct sockaddr *)&sa, &len)) < 0) {
-					perror("accept");
-					exit(1);
-				}
-				if (!inet_ntop(AF_INET, &sa.sin_addr, addrstr, sizeof(addrstr))) {
-					perror("could not format IP address");
-					exit(1);
-				}
-				fprintf(stderr, "Incoming connection from %s:%d\n",
-					addrstr, ntohs(sa.sin_port));
-				
-				// Port of the first client connected
-				port1=ntohs(sa.sin_port);
+			len = sizeof(struct sockaddr_in);
+			if ((client1_fd = accept(sd, (struct sockaddr *)&sa, &len)) < 0) {
+				perror("accept");
+				exit(1);
 			}
-			
-			/* Accept second incoming connection */
-			while(client2_fd==0){
-				if ((client2_fd = accept(sd, (struct sockaddr *)&sa, &len)) < 0) {
-					perror("accept");
-					exit(1);
-				}
-				if (!inet_ntop(AF_INET, &sa.sin_addr, addrstr2, sizeof(addrstr2))) {
-					perror("could not format IP address");
-					exit(1);
-				}
-				fprintf(stderr, "Incoming connection from %s:%d\n",
-					addrstr, ntohs(sa.sin_port));
-				
-				// Port of the first client connected
-				port2=ntohs(sa.sin_port);
+			if (!inet_ntop(AF_INET, &sa.sin_addr, addrstr, sizeof(addrstr))) {
+				perror("could not format IP address");
+				exit(1);
 			}
+			fprintf(stderr, "Incoming connection from %s:%d\n",
+				addrstr, ntohs(sa.sin_port));
+
+			// Port of the first client connected
+			port1=ntohs(sa.sin_port);
+		}
+
+		/* Accept second incoming connection */
+		while(client2_fd==0){
+			if ((client2_fd = accept(sd, (struct sockaddr *)&sa, &len)) < 0) {
+				perror("accept");
+				exit(1);
+			}
+			if (!inet_ntop(AF_INET, &sa.sin_addr, addrstr2, sizeof(addrstr2))) {
+				perror("could not format IP address");
+				exit(1);
+			}
+			fprintf(stderr, "Incoming connection from %s:%d\n",
+				addrstr, ntohs(sa.sin_port));
+
+			// Port of the first client connected
+			port2=ntohs(sa.sin_port);
+		}
 
 
 		// Intialization of readfds set
-		FD_ZERO(&readfds); 
-		
+		FD_ZERO(&readfds);
+
 		/* We break out of the loop when one remote peer goes away */
 		for (;;) {
-			
+
 			// Add client socket file descriptors in readfds set.
 			// Should be done in every recursion because we don't know which one was removed
 			FD_SET(client1_fd, &readfds);
 			FD_SET(client2_fd, &readfds);
 
-					
-			if(client1_fd<client2_fd) 
+
+			if(client1_fd<client2_fd)
 				max=client2_fd;
 			else
 				max=client1_fd;
@@ -178,13 +180,14 @@ int main(void)
 					perror("write");
 					exit(1);
 				}
+				fprintf(stdout, "\n");
 				// Write incoming message to other client socket file
 				if (insist_write(client2_fd,buf, n) != n) {
 					perror("write");
 					exit(1);
 				}
 			}
-			
+
 			// Incoming messages have been written in the socket by second client
 			// Checking whether client2_fd is present in readfds, so socket file descriptor would be ready for reading
 			if(FD_ISSET(client2_fd, &readfds)) {
@@ -207,6 +210,7 @@ int main(void)
 					perror("write");
 					exit(1);
 				}
+				fprintf(stdout, "\n");
 				// Write incoming message to other client socket file
 				if (insist_write(client1_fd,buf, n) != n) {
 					perror("write");
@@ -214,7 +218,7 @@ int main(void)
 				}
 			}
 		}
-		
+
 	}
 
 	/* Make sure we don't leak open files */
@@ -224,6 +228,6 @@ int main(void)
 		perror("close");
 	if (close(sd) < 0)
 		perror("close");
-	
+
 	return 1;
 }
