@@ -15,14 +15,14 @@ CFLAGS += -g
 
 LIBS =
 
-BINS = server.exec client.exec
+BINS = server_crypto client_crypto
 
 all: $(BINS)
 
-server.exec: server.c socket-common.h
+server_crypto: server_crypto.c socket-common.h
 	$(CC) $(CFLAGS) -o $@ $< $(LIBS)
 
-client.exec: client.c socket-common.h
+client_crypto: client_crypto.c socket-common.h
 	$(CC) $(CFLAGS) -o $@ $< $(LIBS)
 
 clean:
